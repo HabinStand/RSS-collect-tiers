@@ -530,7 +530,9 @@ def main():
                     
                     # Reach tier distribution chart
                     reach_tier_counts = df['Reach_Tier'].value_counts().sort_index()
-                    reach_tier_counts.index = ['Tier 1 (VERY HIGH)', 'Tier 2 (HIGH)', 'Tier 3 (MEDIUM)', 'Tier 4 (LOW)']
+                    # Map tier numbers to labels, handling missing tiers
+                    reach_tier_labels = {1: 'Tier 1 (VERY HIGH)', 2: 'Tier 2 (HIGH)', 3: 'Tier 3 (MEDIUM)', 4: 'Tier 4 (LOW)'}
+                    reach_tier_counts.index = [reach_tier_labels.get(i, f'Tier {i}') for i in reach_tier_counts.index]
                     st.bar_chart(reach_tier_counts)
                     
                     # Articles by keyword
