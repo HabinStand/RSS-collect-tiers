@@ -1,4 +1,4 @@
- """
+"""
 Streamlit Web App - Carbon Measures RSS Feed Collector
 No terminal required - runs in your browser!
 """
