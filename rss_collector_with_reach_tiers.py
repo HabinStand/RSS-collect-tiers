@@ -431,7 +431,7 @@ def main():
     """)
     
     # Main content
-    tab1, tab2, tab3 = st.tabs(["📥 Collect Feeds", "🔍 Search & Filter", "ℹ️ Instructions"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📥 Collect Feeds", "🔍 Search & Filter", "📊 Summary & Analysis", "ℹ️ Instructions"])
     
     with tab1:
         st.header("📥 Collect RSS Feeds")
@@ -899,6 +899,302 @@ def main():
                     """)
     
     with tab3:
+        st.header("📊 Summary & Analysis")
+        
+        if 'articles_df' not in st.session_state:
+            st.info("👈 Please collect articles first using the 'Collect Feeds' tab")
+        else:
+            df = st.session_state['articles_df']
+            collection_time = st.session_state.get('collection_time', datetime.now())
+            
+            st.subheader("🗓️ Select Time Period for Analysis")
+            
+            # Date range selection
+            col1, col2 = st.columns(2)
+            
+            # Calculate date range from data
+            valid_dates = df[df['Published_Date'].notna()]['Published_Date']
+            if len(valid_dates) > 0:
+                valid_dates_dt = pd.to_datetime(valid_dates).dt.tz_localize(None)
+                min_date = valid_dates_dt.min().date()
+                max_date = valid_dates_dt.max().date()
+            else:
+                min_date = datetime.now().date() - timedelta(days=30)
+                max_date = datetime.now().date()
+            
+            with col1:
+                analysis_start = st.date_input(
+                    "From date",
+                    value=min_date,
+                    min_value=min_date,
+                    max_value=max_date,
+                    key="analysis_start"
+                )
+            
+            with col2:
+                analysis_end = st.date_input(
+                    "To date",
+                    value=max_date,
+                    min_value=min_date,
+                    max_value=max_date,
+                    key="analysis_end"
+                )
+            
+            # Quick time period buttons
+            st.write("Quick select:")
+            col1, col2, col3, col4, col5 = st.columns(5)
+            
+            with col1:
+                if st.button("Last 24h", key="sum_24h"):
+                    analysis_start = (datetime.now() - timedelta(days=1)).date()
+                    analysis_end = datetime.now().date()
+            with col2:
+                if st.button("Last 7 days", key="sum_7d"):
+                    analysis_start = (datetime.now() - timedelta(days=7)).date()
+                    analysis_end = datetime.now().date()
+            with col3:
+                if st.button("Last 30 days", key="sum_30d"):
+                    analysis_start = (datetime.now() - timedelta(days=30)).date()
+                    analysis_end = datetime.now().date()
+            with col4:
+                if st.button("This week", key="sum_week"):
+                    today = datetime.now().date()
+                    analysis_start = today - timedelta(days=today.weekday())
+                    analysis_end = today
+            with col5:
+                if st.button("All data", key="sum_all"):
+                    if len(valid_dates) > 0:
+                        analysis_start = min_date
+                        analysis_end = max_date
+            
+            st.divider()
+            
+            # Filter data by date range
+            filtered_df = df.copy()
+            if 'Published_Date' in filtered_df.columns:
+                start_datetime = pd.Timestamp(analysis_start)
+                end_datetime = pd.Timestamp(analysis_end) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+                
+                date_mask = filtered_df['Published_Date'].isna()
+                if filtered_df['Published_Date'].notna().any():
+                    filtered_df['Published_Date_Compare'] = pd.to_datetime(filtered_df['Published_Date']).dt.tz_localize(None)
+                    date_mask = date_mask | (
+                        (filtered_df['Published_Date_Compare'] >= start_datetime) & 
+                        (filtered_df['Published_Date_Compare'] <= end_datetime)
+                    )
+                filtered_df = filtered_df[date_mask]
+            
+            if len(filtered_df) == 0:
+                st.warning("⚠️ No articles found in the selected time period")
+            else:
+                # Generate Summary
+                st.subheader("📝 Executive Summary")
+                
+                # Calculate key metrics
+                total_articles = len(filtered_df)
+                unique_sources = filtered_df['Source'].nunique()
+                avg_reach_score = filtered_df['Reach_Score'].mean()
+                
+                tier1_count = len(filtered_df[filtered_df['Reach_Tier'] == 1])
+                tier2_count = len(filtered_df[filtered_df['Reach_Tier'] == 2])
+                tier3_count = len(filtered_df[filtered_df['Reach_Tier'] == 3])
+                tier4_count = len(filtered_df[filtered_df['Reach_Tier'] == 4])
+                
+                high_tier_pct = ((tier1_count + tier2_count) / total_articles * 100) if total_articles > 0 else 0
+                
+                # Top sources
+                top_sources = filtered_df['Source'].value_counts().head(5)
+                top_tier1_sources = filtered_df[filtered_df['Reach_Tier'] == 1]['Source'].value_counts().head(3)
+                
+                # Keywords performance
+                keyword_counts = filtered_df['Keyword'].value_counts()
+                top_keyword = keyword_counts.index[0] if len(keyword_counts) > 0 else "N/A"
+                
+                # Category breakdown
+                category_counts = filtered_df['Source_Category'].value_counts()
+                top_category = category_counts.index[0] if len(category_counts) > 0 else "N/A"
+                
+                # Generate narrative summary
+                period_str = f"{analysis_start.strftime('%B %d, %Y')} to {analysis_end.strftime('%B %d, %Y')}"
+                days_diff = (analysis_end - analysis_start).days + 1
+                
+                summary_text = f"""
+### Coverage Report: {period_str}
+
+**Overview:**
+During this {days_diff}-day period, we identified **{total_articles} articles** across **{unique_sources} unique sources** 
+covering your monitored keywords. The average reach score was **{avg_reach_score:.1f}/100**, indicating 
+{"strong elite media coverage" if avg_reach_score > 75 else "good professional coverage" if avg_reach_score > 50 else "broad but moderate reach coverage"}.
+
+**Reach Quality:**
+- **{high_tier_pct:.1f}%** of coverage came from Tier 1 and Tier 2 outlets (high-quality sources)
+- **{tier1_count} articles** appeared in top-tier outlets (Reuters, NYT, Bloomberg, etc.)
+- **{tier2_count} articles** appeared in major industry publications
+- The remaining **{tier3_count + tier4_count} articles** came from niche and smaller outlets
+
+**Top Performing Sources:**
+"""
+                
+                for i, (source, count) in enumerate(top_sources.items(), 1):
+                    reach_info = filtered_df[filtered_df['Source'] == source].iloc[0]
+                    summary_text += f"\n{i}. **{source}** ({count} articles) - Tier {reach_info['Reach_Tier']}, {reach_info['Reach_Label']} reach"
+                
+                if len(top_tier1_sources) > 0:
+                    summary_text += f"\n\n**Elite Media Coverage (Tier 1):**\n"
+                    for source, count in top_tier1_sources.items():
+                        summary_text += f"- {source}: {count} article{'s' if count > 1 else ''}\n"
+                
+                summary_text += f"""
+
+**Keyword Performance:**
+The keyword "**{top_keyword}**" generated the most coverage with {keyword_counts[top_keyword]} articles. 
+"""
+                
+                if len(keyword_counts) > 1:
+                    summary_text += "Other notable keywords:\n"
+                    for keyword, count in list(keyword_counts.items())[1:4]:
+                        summary_text += f"- {keyword}: {count} articles\n"
+                
+                summary_text += f"""
+
+**Source Mix:**
+Coverage was dominated by **{top_category}** ({category_counts[top_category]} articles, {category_counts[top_category]/total_articles*100:.1f}%), 
+"""
+                
+                if len(category_counts) > 1:
+                    summary_text += f"followed by {category_counts.index[1]} ({category_counts.iloc[1]} articles). "
+                
+                # Add insights based on data
+                summary_text += "\n\n**Key Insights:**\n"
+                
+                if high_tier_pct > 50:
+                    summary_text += "- ✅ Strong presence in high-authority outlets suggests mainstream attention\n"
+                elif high_tier_pct > 25:
+                    summary_text += "- ⚠️ Moderate high-tier coverage - opportunity to increase elite media presence\n"
+                else:
+                    summary_text += "- 💡 Coverage is primarily in niche outlets - consider strategies to reach mainstream media\n"
+                
+                if tier1_count > 0:
+                    summary_text += f"- ✅ Excellent: {tier1_count} mention{'s' if tier1_count != 1 else ''} in papers of record and global news wires\n"
+                
+                if avg_reach_score > 70:
+                    summary_text += "- ✅ High average reach score indicates strong overall media quality\n"
+                
+                articles_per_day = total_articles / days_diff if days_diff > 0 else 0
+                summary_text += f"- 📊 Average coverage rate: {articles_per_day:.1f} articles per day\n"
+                
+                if unique_sources < total_articles * 0.3:
+                    summary_text += "- 💡 High concentration: Few sources publishing multiple articles - consider diversifying outreach\n"
+                
+                st.markdown(summary_text)
+                
+                st.divider()
+                
+                # Visual Analytics
+                st.subheader("📈 Visual Analysis")
+                
+                # Key metrics in columns
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("Total Articles", total_articles)
+                with col2:
+                    st.metric("Avg Reach Score", f"{avg_reach_score:.1f}/100")
+                with col3:
+                    st.metric("Elite Coverage %", f"{high_tier_pct:.1f}%")
+                with col4:
+                    st.metric("Articles/Day", f"{articles_per_day:.1f}")
+                
+                # Charts
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write("**Coverage by Reach Tier**")
+                    tier_data = pd.DataFrame({
+                        'Tier': ['Tier 1\n(VERY HIGH)', 'Tier 2\n(HIGH)', 'Tier 3\n(MEDIUM)', 'Tier 4\n(LOW)'],
+                        'Count': [tier1_count, tier2_count, tier3_count, tier4_count]
+                    })
+                    st.bar_chart(tier_data.set_index('Tier'))
+                
+                with col2:
+                    st.write("**Coverage by Source Category**")
+                    st.bar_chart(category_counts)
+                
+                # Timeline if we have dates
+                if filtered_df['Published_Date'].notna().sum() > 0:
+                    st.write("**Coverage Timeline**")
+                    timeline_df = filtered_df[filtered_df['Published_Date'].notna()].copy()
+                    timeline_df['Date'] = pd.to_datetime(timeline_df['Published_Date']).dt.date
+                    daily_counts = timeline_df.groupby('Date').size().reset_index(name='Articles')
+                    daily_counts = daily_counts.set_index('Date')
+                    st.line_chart(daily_counts)
+                
+                st.divider()
+                
+                # Detailed breakdowns
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write("**Top Keywords**")
+                    keyword_df = keyword_counts.head(10).reset_index()
+                    keyword_df.columns = ['Keyword', 'Articles']
+                    st.dataframe(keyword_df, hide_index=True, use_container_width=True)
+                
+                with col2:
+                    st.write("**Top Sources**")
+                    source_df = top_sources.head(10).reset_index()
+                    source_df.columns = ['Source', 'Articles']
+                    # Add tier info
+                    source_df['Tier'] = source_df['Source'].apply(
+                        lambda x: filtered_df[filtered_df['Source'] == x].iloc[0]['Reach_Tier']
+                    )
+                    st.dataframe(source_df, hide_index=True, use_container_width=True)
+                
+                # Download summary
+                st.divider()
+                st.subheader("💾 Export Summary")
+                
+                # Create summary data for export
+                summary_data = {
+                    'period': period_str,
+                    'days': days_diff,
+                    'total_articles': total_articles,
+                    'unique_sources': unique_sources,
+                    'avg_reach_score': round(avg_reach_score, 2),
+                    'tier1_count': tier1_count,
+                    'tier2_count': tier2_count,
+                    'tier3_count': tier3_count,
+                    'tier4_count': tier4_count,
+                    'high_tier_percentage': round(high_tier_pct, 2),
+                    'articles_per_day': round(articles_per_day, 2),
+                    'top_keyword': top_keyword,
+                    'top_category': top_category,
+                    'top_sources': top_sources.head(5).to_dict()
+                }
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Download full summary as text
+                    summary_filename = f"summary_{analysis_start.strftime('%Y%m%d')}_{analysis_end.strftime('%Y%m%d')}.txt"
+                    st.download_button(
+                        label="📄 Download Text Summary",
+                        data=summary_text,
+                        file_name=summary_filename,
+                        mime="text/plain"
+                    )
+                
+                with col2:
+                    # Download summary data as JSON
+                    json_filename = f"summary_data_{analysis_start.strftime('%Y%m%d')}_{analysis_end.strftime('%Y%m%d')}.json"
+                    st.download_button(
+                        label="📊 Download Summary Data (JSON)",
+                        data=json.dumps(summary_data, indent=2),
+                        file_name=json_filename,
+                        mime="application/json"
+                    )
+    
+    with tab4:
         st.header("📖 How to Use This App")
         
         st.markdown("""
