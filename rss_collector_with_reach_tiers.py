@@ -632,7 +632,47 @@ def main():
                 st.session_state['filter_start_date'] = min_date
             if 'filter_end_date' not in st.session_state:
                 st.session_state['filter_end_date'] = max_date
+            if 'filter_quick_filter' not in st.session_state:
+                st.session_state['filter_quick_filter'] = None
             
+            # Quick date filters - MOVED TO TOP
+            st.write("Quick filters:")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                button_type = "primary" if st.session_state['filter_quick_filter'] == 'today' else "secondary"
+                if st.button("Today", key="filter_today", type=button_type):
+                    st.session_state['filter_start_date'] = datetime.now().date()
+                    st.session_state['filter_end_date'] = datetime.now().date()
+                    st.session_state['filter_quick_filter'] = 'today'
+                    st.rerun()
+            
+            with col2:
+                button_type = "primary" if st.session_state['filter_quick_filter'] == '7days' else "secondary"
+                if st.button("Last 7 days", key="filter_7days", type=button_type):
+                    st.session_state['filter_start_date'] = (datetime.now() - timedelta(days=7)).date()
+                    st.session_state['filter_end_date'] = datetime.now().date()
+                    st.session_state['filter_quick_filter'] = '7days'
+                    st.rerun()
+            
+            with col3:
+                button_type = "primary" if st.session_state['filter_quick_filter'] == '30days' else "secondary"
+                if st.button("Last 30 days", key="filter_30days", type=button_type):
+                    st.session_state['filter_start_date'] = (datetime.now() - timedelta(days=30)).date()
+                    st.session_state['filter_end_date'] = datetime.now().date()
+                    st.session_state['filter_quick_filter'] = '30days'
+                    st.rerun()
+            
+            with col4:
+                button_type = "primary" if st.session_state['filter_quick_filter'] == 'all' else "secondary"
+                if st.button("All time", key="filter_all", type=button_type):
+                    if len(valid_dates) > 0:
+                        st.session_state['filter_start_date'] = min_date
+                        st.session_state['filter_end_date'] = max_date
+                        st.session_state['filter_quick_filter'] = 'all'
+                        st.rerun()
+            
+            # Date range selection - shows current values from session state
             col1, col2 = st.columns(2)
             
             with col1:
@@ -659,42 +699,15 @@ def main():
                 if st.button("✅ Apply", type="primary", key="apply_filter_dates"):
                     st.session_state['filter_start_date'] = temp_filter_start
                     st.session_state['filter_end_date'] = temp_filter_end
+                    st.session_state['filter_quick_filter'] = None  # Clear quick filter when manually applying
                     st.rerun()
             
             with col2:
                 if st.button("🔄 Reset", key="reset_filter_dates"):
                     st.session_state['filter_start_date'] = min_date
                     st.session_state['filter_end_date'] = max_date
+                    st.session_state['filter_quick_filter'] = 'all'  # Set to 'all' when reset
                     st.rerun()
-            
-            # Quick date filters
-            st.write("Quick filters:")
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                if st.button("Today", key="filter_today"):
-                    st.session_state['filter_start_date'] = datetime.now().date()
-                    st.session_state['filter_end_date'] = datetime.now().date()
-                    st.rerun()
-            
-            with col2:
-                if st.button("Last 7 days", key="filter_7days"):
-                    st.session_state['filter_start_date'] = (datetime.now() - timedelta(days=7)).date()
-                    st.session_state['filter_end_date'] = datetime.now().date()
-                    st.rerun()
-            
-            with col3:
-                if st.button("Last 30 days", key="filter_30days"):
-                    st.session_state['filter_start_date'] = (datetime.now() - timedelta(days=30)).date()
-                    st.session_state['filter_end_date'] = datetime.now().date()
-                    st.rerun()
-            
-            with col4:
-                if st.button("All time", key="filter_all"):
-                    if len(valid_dates) > 0:
-                        st.session_state['filter_start_date'] = min_date
-                        st.session_state['filter_end_date'] = max_date
-                        st.rerun()
             
             # Use session state values for filtering
             start_date = st.session_state['filter_start_date']
@@ -941,8 +954,52 @@ def main():
                 st.session_state['analysis_start_date'] = min_date
             if 'analysis_end_date' not in st.session_state:
                 st.session_state['analysis_end_date'] = max_date
+            if 'analysis_quick_filter' not in st.session_state:
+                st.session_state['analysis_quick_filter'] = None
             
-            # Date range selection
+            # Quick time period buttons - MOVED TO TOP
+            st.write("Quick select:")
+            col1, col2, col3, col4, col5 = st.columns(5)
+            
+            with col1:
+                button_type = "primary" if st.session_state['analysis_quick_filter'] == '24h' else "secondary"
+                if st.button("Last 24h", key="sum_24h", type=button_type):
+                    st.session_state['analysis_start_date'] = (datetime.now() - timedelta(days=1)).date()
+                    st.session_state['analysis_end_date'] = datetime.now().date()
+                    st.session_state['analysis_quick_filter'] = '24h'
+                    st.rerun()
+            with col2:
+                button_type = "primary" if st.session_state['analysis_quick_filter'] == '7d' else "secondary"
+                if st.button("Last 7 days", key="sum_7d", type=button_type):
+                    st.session_state['analysis_start_date'] = (datetime.now() - timedelta(days=7)).date()
+                    st.session_state['analysis_end_date'] = datetime.now().date()
+                    st.session_state['analysis_quick_filter'] = '7d'
+                    st.rerun()
+            with col3:
+                button_type = "primary" if st.session_state['analysis_quick_filter'] == '30d' else "secondary"
+                if st.button("Last 30 days", key="sum_30d", type=button_type):
+                    st.session_state['analysis_start_date'] = (datetime.now() - timedelta(days=30)).date()
+                    st.session_state['analysis_end_date'] = datetime.now().date()
+                    st.session_state['analysis_quick_filter'] = '30d'
+                    st.rerun()
+            with col4:
+                button_type = "primary" if st.session_state['analysis_quick_filter'] == 'week' else "secondary"
+                if st.button("This week", key="sum_week", type=button_type):
+                    today = datetime.now().date()
+                    st.session_state['analysis_start_date'] = today - timedelta(days=today.weekday())
+                    st.session_state['analysis_end_date'] = today
+                    st.session_state['analysis_quick_filter'] = 'week'
+                    st.rerun()
+            with col5:
+                button_type = "primary" if st.session_state['analysis_quick_filter'] == 'all' else "secondary"
+                if st.button("All data", key="sum_all", type=button_type):
+                    if len(valid_dates) > 0:
+                        st.session_state['analysis_start_date'] = min_date
+                        st.session_state['analysis_end_date'] = max_date
+                        st.session_state['analysis_quick_filter'] = 'all'
+                        st.rerun()
+            
+            # Date range selection - shows current values from session state
             col1, col2 = st.columns(2)
             
             with col1:
@@ -969,45 +1026,15 @@ def main():
                 if st.button("✅ Apply", type="primary", key="apply_analysis_dates"):
                     st.session_state['analysis_start_date'] = temp_start
                     st.session_state['analysis_end_date'] = temp_end
+                    st.session_state['analysis_quick_filter'] = None  # Clear quick filter when manually applying
                     st.rerun()
             
             with col2:
                 if st.button("🔄 Reset", key="reset_analysis_dates"):
                     st.session_state['analysis_start_date'] = min_date
                     st.session_state['analysis_end_date'] = max_date
+                    st.session_state['analysis_quick_filter'] = 'all'  # Set to 'all' when reset
                     st.rerun()
-            
-            # Quick time period buttons
-            st.write("Quick select:")
-            col1, col2, col3, col4, col5 = st.columns(5)
-            
-            with col1:
-                if st.button("Last 24h", key="sum_24h"):
-                    st.session_state['analysis_start_date'] = (datetime.now() - timedelta(days=1)).date()
-                    st.session_state['analysis_end_date'] = datetime.now().date()
-                    st.rerun()
-            with col2:
-                if st.button("Last 7 days", key="sum_7d"):
-                    st.session_state['analysis_start_date'] = (datetime.now() - timedelta(days=7)).date()
-                    st.session_state['analysis_end_date'] = datetime.now().date()
-                    st.rerun()
-            with col3:
-                if st.button("Last 30 days", key="sum_30d"):
-                    st.session_state['analysis_start_date'] = (datetime.now() - timedelta(days=30)).date()
-                    st.session_state['analysis_end_date'] = datetime.now().date()
-                    st.rerun()
-            with col4:
-                if st.button("This week", key="sum_week"):
-                    today = datetime.now().date()
-                    st.session_state['analysis_start_date'] = today - timedelta(days=today.weekday())
-                    st.session_state['analysis_end_date'] = today
-                    st.rerun()
-            with col5:
-                if st.button("All data", key="sum_all"):
-                    if len(valid_dates) > 0:
-                        st.session_state['analysis_start_date'] = min_date
-                        st.session_state['analysis_end_date'] = max_date
-                        st.rerun()
             
             # Use session state values for filtering
             analysis_start = st.session_state['analysis_start_date']
