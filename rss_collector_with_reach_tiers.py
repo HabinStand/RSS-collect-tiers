@@ -987,8 +987,122 @@ def main():
             if len(filtered_df) == 0:
                 st.warning("⚠️ No articles found in the selected time period")
             else:
-                # Generate Summary
-                st.subheader("📝 Executive Summary")
+                # AI-Powered Thematic Analysis Section
+                st.subheader("📝 Thematic Analysis")
+                
+                with st.expander("🤖 Generate AI Analysis (Click to expand)", expanded=False):
+                    st.markdown("""
+                    ### How to get AI-powered thematic analysis:
+                    
+                    **Option 1: Copy & Paste to Claude/ChatGPT** (Easiest)
+                    1. Click the button below to copy article titles
+                    2. Go to [Claude.ai](https://claude.ai) or [ChatGPT](https://chat.openai.com)
+                    3. Paste and ask: *"Analyze the key themes, narratives, and sentiment in these article titles"*
+                    """)
+                    
+                    # Prepare articles for copying
+                    articles_for_analysis = filtered_df.head(100)  # Up to 100 articles
+                    articles_text = f"Articles from {analysis_start.strftime('%B %d, %Y')} to {analysis_end.strftime('%B %d, %Y')}:\n\n"
+                    
+                    for idx, row in articles_for_analysis.iterrows():
+                        articles_text += f"• [{row['Source']}] {row['Title']}\n"
+                    
+                    articles_text += f"\n\nTotal articles in period: {len(filtered_df)}"
+                    articles_text += f"\nTop keywords: {', '.join(filtered_df['Keyword'].value_counts().head(5).index.tolist())}"
+                    
+                    st.text_area(
+                        "📋 Copy these articles for AI analysis:",
+                        articles_text,
+                        height=300,
+                        help="Copy this text and paste into Claude.ai or ChatGPT for thematic analysis"
+                    )
+                    
+                    st.markdown("""
+                    **Suggested prompt to use:**
+                    ```
+                    Please analyze these news articles and provide:
+                    
+                    1. Main Themes (3-4 dominant topics)
+                    2. Key Narratives (emerging stories and angles)
+                    3. Sentiment & Tone (positive, negative, neutral, mixed)
+                    4. Notable Patterns (trends, controversies, developments)
+                    
+                    Write as a concise executive summary (3-4 paragraphs).
+                    ```
+                    """)
+                    
+                    st.divider()
+                    
+                    st.markdown("""
+                    **Option 2: Use API (Advanced)**
+                    
+                    If you have an Anthropic API key, you can enable automatic analysis:
+                    """)
+                    
+                    api_key = st.text_input("Enter your Anthropic API Key (optional)", type="password", key="anthropic_key")
+                    
+                    if api_key and st.button("🚀 Generate AI Analysis"):
+                        with st.spinner("Analyzing with Claude AI..."):
+                            try:
+                                import requests
+                                
+                                prompt = f"""Analyze these news articles from {analysis_start.strftime('%B %d, %Y')} to {analysis_end.strftime('%B %d, %Y')}:
+
+{articles_text[:4000]}  
+
+Please provide a concise thematic analysis covering:
+1. **Main Themes**: What are the 3-4 dominant themes or topics?
+2. **Key Narratives**: What stories or narratives are emerging?
+3. **Sentiment & Tone**: What is the overall sentiment?
+4. **Notable Patterns**: Any interesting patterns or developments?
+
+Keep it to 3-4 paragraphs, professional tone."""
+                                
+                                response = requests.post(
+                                    "https://api.anthropic.com/v1/messages",
+                                    headers={
+                                        "Content-Type": "application/json",
+                                        "x-api-key": api_key,
+                                        "anthropic-version": "2023-06-01"
+                                    },
+                                    json={
+                                        "model": "claude-sonnet-4-20250514",
+                                        "max_tokens": 1500,
+                                        "messages": [
+                                            {"role": "user", "content": prompt}
+                                        ]
+                                    },
+                                    timeout=30
+                                )
+                                
+                                if response.status_code == 200:
+                                    result = response.json()
+                                    ai_analysis = result['content'][0]['text']
+                                    
+                                    st.success("✅ Analysis complete!")
+                                    st.markdown("### 📝 AI Analysis Results")
+                                    st.markdown(ai_analysis)
+                                    
+                                    # Store in session
+                                    st.session_state['ai_analysis'] = ai_analysis
+                                    st.session_state['ai_analysis_period'] = f"{analysis_start}_{analysis_end}"
+                                else:
+                                    st.error(f"API Error {response.status_code}: {response.text}")
+                                
+                            except Exception as e:
+                                st.error(f"Error: {str(e)}")
+                                st.info("Please check your API key or use the copy-paste method above.")
+                
+                # Show previously generated analysis if available
+                current_period = f"{analysis_start}_{analysis_end}"
+                if 'ai_analysis' in st.session_state and st.session_state.get('ai_analysis_period') == current_period:
+                    st.markdown("### 📝 In Summary (AI-Generated)")
+                    st.markdown(st.session_state['ai_analysis'])
+                    st.caption("💾 Previous analysis for this period")
+                    st.divider()
+                
+                # Statistical Summary
+                st.subheader("📊 Statistical Overview")
                 
                 # Calculate key metrics
                 total_articles = len(filtered_df)
