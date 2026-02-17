@@ -673,12 +673,16 @@ def main():
                         st.rerun()
             
             # Date range selection - shows current values from session state
+            # Clamp stored dates to valid data range to avoid out-of-bounds errors
+            clamped_filter_start = max(min_date, min(st.session_state['filter_start_date'], max_date))
+            clamped_filter_end = max(min_date, min(st.session_state['filter_end_date'], max_date))
+            
             col1, col2 = st.columns(2)
             
             with col1:
                 temp_filter_start = st.date_input(
                     "From date",
-                    value=st.session_state['filter_start_date'],
+                    value=clamped_filter_start,
                     min_value=min_date,
                     max_value=max_date,
                     key="temp_filter_start"
@@ -687,7 +691,7 @@ def main():
             with col2:
                 temp_filter_end = st.date_input(
                     "To date",
-                    value=st.session_state['filter_end_date'],
+                    value=clamped_filter_end,
                     min_value=min_date,
                     max_value=max_date,
                     key="temp_filter_end"
@@ -709,7 +713,7 @@ def main():
                     st.session_state['filter_quick_filter'] = 'all'  # Set to 'all' when reset
                     st.rerun()
             
-            # Use session state values for filtering
+            # Use session state values for filtering (not clamped - allows wider date range queries)
             start_date = st.session_state['filter_start_date']
             end_date = st.session_state['filter_end_date']
             
@@ -1000,12 +1004,16 @@ def main():
                         st.rerun()
             
             # Date range selection - shows current values from session state
+            # Clamp stored dates to valid data range to avoid out-of-bounds errors
+            clamped_start = max(min_date, min(st.session_state['analysis_start_date'], max_date))
+            clamped_end = max(min_date, min(st.session_state['analysis_end_date'], max_date))
+            
             col1, col2 = st.columns(2)
             
             with col1:
                 temp_start = st.date_input(
                     "From date",
-                    value=st.session_state['analysis_start_date'],
+                    value=clamped_start,
                     min_value=min_date,
                     max_value=max_date,
                     key="temp_analysis_start"
@@ -1014,7 +1022,7 @@ def main():
             with col2:
                 temp_end = st.date_input(
                     "To date",
-                    value=st.session_state['analysis_end_date'],
+                    value=clamped_end,
                     min_value=min_date,
                     max_value=max_date,
                     key="temp_analysis_end"
@@ -1036,7 +1044,7 @@ def main():
                     st.session_state['analysis_quick_filter'] = 'all'  # Set to 'all' when reset
                     st.rerun()
             
-            # Use session state values for filtering
+            # Use session state values for filtering (not clamped - allows wider date range queries)
             analysis_start = st.session_state['analysis_start_date']
             analysis_end = st.session_state['analysis_end_date']
             
