@@ -20,34 +20,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# ── PASSWORD GATE ──────────────────────────────────────────────
-def check_password():
-    """Returns True if the user has entered the correct password."""
-    if "authenticated" not in st.session_state:
-        st.session_state["authenticated"] = False
-
-    if st.session_state["authenticated"]:
-        return True
-
-    st.title("🔒 RSS Feed Collector")
-    st.markdown("Please enter the password to access this app.")
-
-    password_input = st.text_input("Password", type="password")
-
-    if st.button("Login"):
-        # ✏️  Change the password below to whatever you want
-        if password_input == "IgorTudorIsAClown":
-            st.session_state["authenticated"] = True
-            st.rerun()
-        else:
-            st.error("Incorrect password. Please try again.")
-
-    return False
-
-if not check_password():
-    st.stop()   # Everything below this line is hidden until logged in
-# ── END PASSWORD GATE ──────────────────────────────────────────
-
 # Initialize session state for keywords
 if 'custom_keywords' not in st.session_state:
     st.session_state['custom_keywords'] = []
